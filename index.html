@@ -1,0 +1,774 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Listing Bridge — MakerBook to Etsy for Woodworkers</title>
+<meta name="description" content="A personal productivity tool for handmade woodworking sellers. Cross-post listings from MakerBook to Etsy in seconds.">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0c0a08;
+    --surface: #161310;
+    --surface2: #1e1a15;
+    --border: #2e2820;
+    --accent: #c8a96e;
+    --accent2: #e8c97e;
+    --accent-dim: rgba(200,169,110,0.12);
+    --text: #e8e0d0;
+    --muted: #7a6f5e;
+    --success: #6dba7a;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 14px;
+    line-height: 1.7;
+    overflow-x: hidden;
+  }
+
+  /* GRAIN OVERLAY */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 100;
+  }
+
+  /* WOOD GRAIN TOP BAR */
+  .wood-bar {
+    height: 4px;
+    background: linear-gradient(90deg,
+      #3d1f0a 0%, #8b5e2a 15%, #c8a96e 30%,
+      #6b3a12 45%, #e8c97e 60%, #8b5e2a 75%,
+      #c8a96e 90%, #3d1f0a 100%);
+    background-size: 200% 100%;
+    animation: woodShift 12s linear infinite;
+  }
+  @keyframes woodShift { 0%{background-position:0%} 100%{background-position:200%} }
+
+  /* NAV */
+  nav {
+    position: fixed;
+    top: 4px;
+    left: 0; right: 0;
+    z-index: 50;
+    padding: 16px 40px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: rgba(12,10,8,0.85);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .nav-logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: 'Playfair Display', serif;
+    font-size: 18px;
+    color: var(--accent);
+    text-decoration: none;
+  }
+
+  .nav-logo-icon {
+    width: 30px; height: 30px;
+    background: var(--accent);
+    clip-path: polygon(20% 0%, 80% 0%, 100% 20%, 100% 80%, 80% 100%, 20% 100%, 0% 80%, 0% 20%);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px;
+  }
+
+  .nav-links {
+    display: flex;
+    gap: 32px;
+    list-style: none;
+  }
+
+  .nav-links a {
+    color: var(--muted);
+    text-decoration: none;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    transition: color 0.2s;
+  }
+  .nav-links a:hover { color: var(--accent); }
+
+  .nav-cta {
+    background: var(--accent);
+    color: #0c0a08 !important;
+    padding: 8px 18px;
+    font-size: 11px !important;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    text-decoration: none;
+    transition: background 0.2s, transform 0.2s;
+    font-weight: 500;
+  }
+  .nav-cta:hover { background: var(--accent2) !important; transform: translateY(-1px); }
+
+  /* HERO */
+  .hero {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 120px 40px 80px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .hero-bg {
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 60% 50% at 50% 60%, rgba(200,169,110,0.06) 0%, transparent 70%),
+      radial-gradient(ellipse 40% 30% at 20% 80%, rgba(139,94,42,0.04) 0%, transparent 60%);
+  }
+
+  /* Decorative wood rings */
+  .wood-rings {
+    position: absolute;
+    width: 600px; height: 600px;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    opacity: 0.04;
+  }
+
+  .wood-rings circle {
+    fill: none;
+    stroke: var(--accent);
+    stroke-width: 1;
+  }
+
+  .hero-tag {
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--accent);
+    border: 1px solid var(--border);
+    padding: 6px 16px;
+    margin-bottom: 28px;
+    display: inline-block;
+    animation: fadeUp 0.6s ease both;
+  }
+
+  h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(42px, 7vw, 80px);
+    font-weight: 700;
+    line-height: 1.1;
+    color: var(--text);
+    margin-bottom: 24px;
+    animation: fadeUp 0.6s ease 0.1s both;
+  }
+
+  h1 em {
+    font-style: italic;
+    color: var(--accent);
+  }
+
+  .hero-sub {
+    font-size: 15px;
+    color: var(--muted);
+    max-width: 520px;
+    margin: 0 auto 40px;
+    line-height: 1.8;
+    animation: fadeUp 0.6s ease 0.2s both;
+  }
+
+  .hero-actions {
+    display: flex;
+    gap: 14px;
+    justify-content: center;
+    flex-wrap: wrap;
+    animation: fadeUp 0.6s ease 0.3s both;
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    color: #0c0a08;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: 14px 32px;
+    text-decoration: none;
+    font-weight: 500;
+    transition: all 0.2s;
+    display: inline-block;
+  }
+  .btn-primary:hover { background: var(--accent2); transform: translateY(-2px); }
+
+  .btn-secondary {
+    background: transparent;
+    color: var(--accent);
+    border: 1px solid var(--accent);
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: 14px 32px;
+    text-decoration: none;
+    transition: all 0.2s;
+    display: inline-block;
+  }
+  .btn-secondary:hover { background: var(--accent-dim); }
+
+  .hero-scroll {
+    position: absolute;
+    bottom: 40px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    color: var(--muted);
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    animation: fadeUp 0.6s ease 0.5s both;
+  }
+
+  .scroll-line {
+    width: 1px;
+    height: 40px;
+    background: linear-gradient(to bottom, var(--accent), transparent);
+    animation: scrollPulse 2s ease-in-out infinite;
+  }
+
+  @keyframes scrollPulse { 0%,100%{opacity:0.4;transform:scaleY(1)} 50%{opacity:1;transform:scaleY(1.1)} }
+
+  /* SECTION BASE */
+  section {
+    padding: 100px 40px;
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+
+  .section-tag {
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .section-tag::after {
+    content: '';
+    flex: 1;
+    max-width: 60px;
+    height: 1px;
+    background: var(--accent);
+    opacity: 0.4;
+  }
+
+  h2 {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(28px, 4vw, 44px);
+    font-weight: 700;
+    line-height: 1.2;
+    margin-bottom: 20px;
+    color: var(--text);
+  }
+
+  h2 em { font-style: italic; color: var(--accent); }
+
+  .section-sub {
+    color: var(--muted);
+    max-width: 480px;
+    margin-bottom: 60px;
+    font-size: 13px;
+    line-height: 1.8;
+  }
+
+  /* HOW IT WORKS */
+  .steps-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 2px;
+    background: var(--border);
+  }
+
+  .step-card {
+    background: var(--surface);
+    padding: 36px 32px;
+    position: relative;
+    overflow: hidden;
+    transition: background 0.2s;
+  }
+  .step-card:hover { background: var(--surface2); }
+
+  .step-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--accent), transparent);
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+  .step-card:hover::before { opacity: 1; }
+
+  .step-number {
+    font-family: 'Playfair Display', serif;
+    font-size: 64px;
+    color: var(--border);
+    line-height: 1;
+    margin-bottom: 20px;
+    font-weight: 700;
+  }
+
+  .step-icon {
+    font-size: 28px;
+    margin-bottom: 16px;
+    display: block;
+  }
+
+  .step-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 20px;
+    color: var(--text);
+    margin-bottom: 10px;
+  }
+
+  .step-desc {
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.8;
+  }
+
+  /* FEATURES */
+  .features-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 24px;
+  }
+
+  .feature-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 28px;
+    position: relative;
+    transition: border-color 0.2s, transform 0.2s;
+  }
+  .feature-card:hover { border-color: var(--accent); transform: translateY(-3px); }
+
+  .feature-icon {
+    font-size: 24px;
+    margin-bottom: 14px;
+    display: block;
+  }
+
+  .feature-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 18px;
+    color: var(--text);
+    margin-bottom: 8px;
+  }
+
+  .feature-desc {
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.8;
+  }
+
+  /* PRIVACY SECTION */
+  .privacy-block {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    padding: 40px 48px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 40px;
+    align-items: center;
+  }
+
+  .privacy-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 28px;
+    color: var(--text);
+    margin-bottom: 12px;
+  }
+
+  .privacy-desc {
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.9;
+  }
+
+  .privacy-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .privacy-list li {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.6;
+  }
+
+  .privacy-list li::before {
+    content: '✓';
+    color: var(--success);
+    font-size: 13px;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+
+  /* ETSY INTEGRATION */
+  .integration-block {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2px;
+    background: var(--border);
+    margin-top: 60px;
+  }
+
+  .integration-panel {
+    background: var(--surface);
+    padding: 40px;
+  }
+
+  .integration-label {
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 16px;
+  }
+
+  .integration-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 22px;
+    color: var(--text);
+    margin-bottom: 12px;
+  }
+
+  .integration-desc {
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.9;
+  }
+
+  /* SCOPES TABLE */
+  .scope-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+    font-size: 12px;
+  }
+
+  .scope-table th {
+    text-align: left;
+    color: var(--muted);
+    font-weight: 400;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-size: 10px;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .scope-table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+    color: var(--text);
+    vertical-align: top;
+  }
+
+  .scope-table td:first-child {
+    color: var(--accent);
+    font-size: 11px;
+    white-space: nowrap;
+  }
+
+  .scope-table td:last-child { color: var(--muted); }
+
+  /* FOOTER */
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+
+  .footer-logo {
+    font-family: 'Playfair Display', serif;
+    color: var(--accent);
+    font-size: 16px;
+  }
+
+  .footer-note {
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  /* DIVIDER */
+  .full-divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+
+  /* ANIMATIONS */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* RESPONSIVE */
+  @media (max-width: 700px) {
+    nav { padding: 14px 20px; }
+    .nav-links { display: none; }
+    section { padding: 60px 24px; }
+    .privacy-block, .integration-block { grid-template-columns: 1fr; }
+    footer { flex-direction: column; text-align: center; }
+    .hero { padding: 100px 24px 60px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="wood-bar"></div>
+
+<nav>
+  <a href="#" class="nav-logo">
+    <div class="nav-logo-icon">🪵</div>
+    Listing Bridge
+  </a>
+  <ul class="nav-links">
+    <li><a href="#how-it-works">How it works</a></li>
+    <li><a href="#features">Features</a></li>
+    <li><a href="#privacy">Privacy</a></li>
+    <li><a href="#etsy">Etsy Integration</a></li>
+  </ul>
+  <a href="./app.html" class="nav-cta">Open App →</a>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-bg"></div>
+  <svg class="wood-rings" viewBox="0 0 600 600">
+    <circle cx="300" cy="300" r="50"/>
+    <circle cx="300" cy="300" r="90"/>
+    <circle cx="300" cy="300" r="130"/>
+    <circle cx="300" cy="300" r="175"/>
+    <circle cx="300" cy="300" r="220"/>
+    <circle cx="300" cy="300" r="265"/>
+    <circle cx="300" cy="300" r="290"/>
+  </svg>
+
+  <div class="hero-tag">Personal Seller Tool · Woodworking</div>
+  <h1>From MakerBook<br>to <em>Etsy</em>, in seconds.</h1>
+  <p class="hero-sub">Listing Bridge is a private tool that converts woodworking product listings from MakerBook into fully formatted Etsy listings — with AI-assisted spell checking, automatic price markup, SEO tags, and direct Etsy posting.</p>
+  <div class="hero-actions">
+    <a href="./app.html" class="btn-primary">Open the Tool</a>
+    <a href="#how-it-works" class="btn-secondary">See how it works</a>
+  </div>
+
+  <div class="hero-scroll">
+    <div class="scroll-line"></div>
+    Scroll
+  </div>
+</div>
+
+<hr class="full-divider">
+
+<!-- HOW IT WORKS -->
+<section id="how-it-works">
+  <div class="section-tag">Process</div>
+  <h2>Four steps.<br><em>One listing, two platforms.</em></h2>
+  <p class="section-sub">Built for a single woodworking seller who lists handmade items on both MakerBook and Etsy and wants to stop duplicating work.</p>
+
+  <div class="steps-grid">
+    <div class="step-card">
+      <div class="step-number">01</div>
+      <span class="step-icon">📋</span>
+      <div class="step-title">Paste your listing</div>
+      <p class="step-desc">Copy the text from your MakerBook listing page and paste it into the tool. The AI extracts the title, description, price, dimensions, and materials automatically.</p>
+    </div>
+    <div class="step-card">
+      <div class="step-number">02</div>
+      <span class="step-icon">✏️</span>
+      <div class="step-title">Review & adjust</div>
+      <p class="step-desc">Check the extracted fields, choose your Etsy tags from preset woodworking keywords, and set your price markup with a simple slider — defaults to 10%.</p>
+    </div>
+    <div class="step-card">
+      <div class="step-number">03</div>
+      <span class="step-icon">⚡</span>
+      <div class="step-title">Generate</div>
+      <p class="step-desc">The AI corrects spelling and punctuation in the description without changing your words, generates 13 SEO-optimized Etsy tags, and auto-selects the best category.</p>
+    </div>
+    <div class="step-card">
+      <div class="step-number">04</div>
+      <span class="step-icon">🏪</span>
+      <div class="step-title">Post to Etsy</div>
+      <p class="step-desc">Use the step-by-step copy panel to paste each field into Etsy, or post directly to your shop as a draft via the Etsy API once connected.</p>
+    </div>
+  </div>
+</section>
+
+<hr class="full-divider">
+
+<!-- FEATURES -->
+<section id="features">
+  <div class="section-tag">Features</div>
+  <h2>Everything a <em>one-person</em><br>woodworking shop needs.</h2>
+  <p class="section-sub">No subscriptions, no accounts, no data collection. Just a tool that runs in your browser.</p>
+
+  <div class="features-grid">
+    <div class="feature-card">
+      <span class="feature-icon">🖥</span>
+      <div class="feature-title">Runs locally</div>
+      <p class="feature-desc">The entire app is a single HTML file. Open it in any browser — no install, no server, no internet required for the interface itself.</p>
+    </div>
+    <div class="feature-card">
+      <span class="feature-icon">🤖</span>
+      <div class="feature-title">Local AI support</div>
+      <p class="feature-desc">Connects to Ollama running on your machine for completely free, private AI processing. No API costs, no data leaving your computer. Also supports Anthropic's cloud API as a fallback.</p>
+    </div>
+    <div class="feature-card">
+      <span class="feature-icon">💰</span>
+      <div class="feature-title">Automatic price markup</div>
+      <p class="feature-desc">Set a percentage markup for Etsy listings relative to your MakerBook price. Adjustable from 0–100% with a live preview. Defaults to 10% to account for Etsy's fee structure.</p>
+    </div>
+    <div class="feature-card">
+      <span class="feature-icon">🏷</span>
+      <div class="feature-title">SEO tag generation</div>
+      <p class="feature-desc">Generates up to 13 Etsy-optimized tags based on your listing content, with individual copy buttons for each tag so you can paste them one at a time into Etsy.</p>
+    </div>
+    <div class="feature-card">
+      <span class="feature-icon">📝</span>
+      <div class="feature-title">Description preserved</div>
+      <p class="feature-desc">Your listing description stays yours. The AI only corrects spelling mistakes and adds missing punctuation — it does not rewrite, reorder, or add any new content.</p>
+    </div>
+    <div class="feature-card">
+      <span class="feature-icon">📦</span>
+      <div class="feature-title">Step-by-step copy panel</div>
+      <p class="feature-desc">A numbered guide matches Etsy's listing form order. Each field has a one-click copy button that turns green when done, so you always know where you're up to.</p>
+    </div>
+  </div>
+</section>
+
+<hr class="full-divider">
+
+<!-- PRIVACY -->
+<section id="privacy">
+  <div class="section-tag">Privacy & Data</div>
+  <h2>Your data stays<br><em>on your machine.</em></h2>
+
+  <div class="privacy-block">
+    <div>
+      <div class="privacy-title">Built for one seller.</div>
+      <p class="privacy-desc">Listing Bridge is a personal productivity tool used exclusively by its developer to manage their own Etsy shop. It is not a commercial product, not a SaaS platform, and not available to the public.<br><br>No analytics, no tracking, no advertising. Nothing is collected, stored, or transmitted to any third party other than the Etsy API and optionally the Anthropic API for AI processing.</p>
+    </div>
+    <ul class="privacy-list">
+      <li>No user accounts or registration</li>
+      <li>No cookies or tracking scripts</li>
+      <li>No data stored on any server</li>
+      <li>AI processing runs locally on your machine via Ollama</li>
+      <li>Etsy OAuth tokens stored only in browser memory for the session</li>
+      <li>Anthropic API key (if used) never leaves your browser tab</li>
+      <li>All listing data remains on your device</li>
+    </ul>
+  </div>
+</section>
+
+<hr class="full-divider">
+
+<!-- ETSY INTEGRATION -->
+<section id="etsy">
+  <div class="section-tag">Etsy API Integration</div>
+  <h2>Direct posting<br><em>to your shop.</em></h2>
+  <p class="section-sub">The Etsy integration uses OAuth 2.0 with PKCE — the same secure login standard used by major apps. Your Etsy credentials are never seen or stored by this tool.</p>
+
+  <div class="integration-block">
+    <div class="integration-panel">
+      <div class="integration-label">OAuth Flow</div>
+      <div class="integration-title">Secure, standard login</div>
+      <p class="integration-desc">Clicking "Connect Etsy" opens Etsy's official login page in a popup. The seller logs in directly on Etsy's servers — this tool never sees their password. After approval, Etsy issues a short-lived access token stored only in browser memory for that session.<br><br>The tool uses PKCE (Proof Key for Code Exchange) — the most secure OAuth flow for browser-based applications, as recommended by Etsy's own documentation.</p>
+    </div>
+    <div class="integration-panel">
+      <div class="integration-label">API Permissions Requested</div>
+      <div class="integration-title">Minimum required scopes</div>
+      <table class="scope-table">
+        <tr>
+          <th>Scope</th>
+          <th>Purpose</th>
+        </tr>
+        <tr>
+          <td>listings_w</td>
+          <td>Create and update draft listings in the seller's own shop</td>
+        </tr>
+        <tr>
+          <td>listings_r</td>
+          <td>Read existing listings to verify shop connection</td>
+        </tr>
+        <tr>
+          <td>shops_r</td>
+          <td>Read shop ID and name to confirm the correct shop is connected</td>
+        </tr>
+      </table>
+      <p class="integration-desc" style="margin-top:16px;">No financial data, order data, customer data, or account credentials are accessed. Listings are always created as <strong style="color:var(--text);">drafts</strong> — the seller reviews and publishes manually.</p>
+    </div>
+  </div>
+</section>
+
+<hr class="full-divider">
+
+<footer>
+  <div class="footer-logo">🪵 Listing Bridge</div>
+  <div class="footer-note">A personal tool for handmade woodworking sellers. Not affiliated with Etsy or MakerBook.</div>
+  <div class="footer-note" id="year"></div>
+</footer>
+
+<script>
+  document.getElementById('year').textContent = '© ' + new Date().getFullYear();
+
+  // Fade in sections on scroll
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        e.target.style.opacity = '1';
+        e.target.style.transform = 'translateY(0)';
+      }
+    });
+  }, { threshold: 0.1 });
+
+  document.querySelectorAll('section').forEach(s => {
+    s.style.opacity = '0';
+    s.style.transform = 'translateY(20px)';
+    s.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+    observer.observe(s);
+  });
+</script>
+</body>
+</html>

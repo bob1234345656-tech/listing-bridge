@@ -1,0 +1,1574 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MakerBook → Etsy Listing Converter</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0e0c0a;
+    --surface: #1a1714;
+    --surface2: #242018;
+    --border: #3a3428;
+    --accent: #c8a96e;
+    --accent2: #e8c97e;
+    --text: #e8e0d0;
+    --muted: #8a7f6e;
+    --success: #6dba7a;
+    --grain: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    min-height: 100vh;
+    position: relative;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: var(--grain);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .wood-stripe {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #6b3f1a, #c8a96e, #8b5e2a, #e8c97e, #6b3f1a);
+    background-size: 300% 100%;
+    animation: grain-shift 8s linear infinite;
+  }
+
+  @keyframes grain-shift { 0%{background-position:0% 0%} 100%{background-position:300% 0%} }
+
+  .container {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 48px 24px 80px;
+    position: relative;
+    z-index: 1;
+  }
+
+  header {
+    margin-bottom: 48px;
+    animation: fadeUp 0.6s ease both;
+  }
+
+  .logo-line {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 8px;
+  }
+
+  .logo-icon {
+    width: 36px; height: 36px;
+    background: var(--accent);
+    clip-path: polygon(20% 0%, 80% 0%, 100% 20%, 100% 80%, 80% 100%, 20% 100%, 0% 80%, 0% 20%);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+  }
+
+  h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--accent);
+    letter-spacing: -0.5px;
+  }
+
+  .subtitle {
+    color: var(--muted);
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-top: 6px;
+  }
+
+  /* STEP LAYOUT */
+  .step {
+    margin-bottom: 32px;
+    animation: fadeUp 0.6s ease both;
+  }
+  .step:nth-child(2) { animation-delay: 0.1s; }
+  .step:nth-child(3) { animation-delay: 0.2s; }
+  .step:nth-child(4) { animation-delay: 0.3s; }
+
+  .step-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+
+  .step-num {
+    width: 26px; height: 26px;
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    font-size: 11px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    font-weight: 500;
+    letter-spacing: 0.05em;
+  }
+
+  .step-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 16px;
+    color: var(--text);
+  }
+
+  /* FORM ELEMENTS */
+  .input-row {
+    display: grid;
+    gap: 12px;
+  }
+
+  .input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  label {
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  input[type="text"],
+  input[type="number"],
+  input[type="url"],
+  textarea,
+  select {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    padding: 10px 14px;
+    outline: none;
+    width: 100%;
+    transition: border-color 0.2s, background 0.2s;
+    border-radius: 2px;
+    appearance: none;
+  }
+
+  input:focus, textarea:focus, select:focus {
+    border-color: var(--accent);
+    background: var(--surface2);
+  }
+
+  textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
+
+  .url-row {
+    display: flex;
+    gap: 10px;
+    align-items: flex-end;
+  }
+
+  .url-row .input-group { flex: 1; }
+
+  /* BUTTONS */
+  .btn {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 11px 22px;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s;
+    border-radius: 2px;
+    white-space: nowrap;
+    font-weight: 500;
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    color: #0e0c0a;
+  }
+  .btn-primary:hover { background: var(--accent2); transform: translateY(-1px); }
+  .btn-primary:active { transform: translateY(0); }
+
+  .btn-secondary {
+    background: transparent;
+    color: var(--accent);
+    border: 1px solid var(--accent);
+  }
+  .btn-secondary:hover { background: rgba(200,169,110,0.08); }
+
+  .btn-copy {
+    background: var(--surface2);
+    color: var(--muted);
+    border: 1px solid var(--border);
+    font-size: 11px;
+    padding: 8px 14px;
+    letter-spacing: 0.08em;
+  }
+  .btn-copy:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-copy.copied { border-color: var(--success); color: var(--success); }
+
+  .btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  /* PANEL / CARD */
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    padding: 20px;
+  }
+
+  /* TWO COL */
+  .two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  .three-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 12px;
+  }
+
+  /* OUTPUT SECTION */
+  .output-section {
+    display: none;
+    animation: fadeUp 0.4s ease both;
+  }
+
+  .output-section.visible { display: block; }
+
+  .output-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+    margin-bottom: 16px;
+  }
+
+  .output-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 18px;
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .platform-label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 12px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--accent);
+    font-weight: 500;
+  }
+
+  .platform-dot {
+    width: 8px; height: 8px;
+    background: var(--accent);
+    border-radius: 50%;
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+  .output-field {
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .output-field:last-child { border-bottom: none; }
+
+  .output-field-label {
+    font-size: 10px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 6px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .output-field-value {
+    color: var(--text);
+    line-height: 1.7;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  /* STATUS / LOADING */
+  .status-bar {
+    display: none;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    margin-bottom: 20px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  .status-bar.active { display: flex; }
+
+  .spinner {
+    width: 14px; height: 14px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    flex-shrink: 0;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .error-msg {
+    display: none;
+    padding: 12px 16px;
+    background: rgba(200, 80, 80, 0.1);
+    border: 1px solid rgba(200, 80, 80, 0.3);
+    border-radius: 2px;
+    color: #e88;
+    font-size: 12px;
+    margin-bottom: 20px;
+    line-height: 1.5;
+  }
+  .error-msg.visible { display: block; }
+
+  /* DIVIDER */
+  .divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 28px 0;
+  }
+
+  /* MANUAL FALLBACK */
+  .or-divider {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin: 18px 0;
+    color: var(--muted);
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+  .or-divider::before, .or-divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  .tag-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 8px;
+  }
+
+  .chip {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 11px;
+    padding: 4px 10px;
+    border-radius: 2px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .chip:hover, .chip.active {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: rgba(200,169,110,0.07);
+  }
+
+  .char-count {
+    font-size: 10px;
+    color: var(--muted);
+    text-align: right;
+    margin-top: 4px;
+  }
+
+  .char-count.warn { color: #e8a05a; }
+  .char-count.over { color: #e86060; }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* SECTION ACTIONS */
+  .actions-row {
+    display: flex;
+    gap: 10px;
+    margin-top: 14px;
+    flex-wrap: wrap;
+  }
+
+  /* TOOLTIP */
+  .tip {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 6px;
+    line-height: 1.5;
+  }
+
+  .api-key-banner {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    border-radius: 2px;
+    padding: 14px 18px;
+    margin-bottom: 32px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    animation: fadeUp 0.4s ease both;
+  }
+
+  .api-key-banner label {
+    font-size: 11px;
+    color: var(--accent);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .api-key-banner input {
+    flex: 1;
+    min-width: 200px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    padding: 8px 12px;
+    border-radius: 2px;
+    outline: none;
+    letter-spacing: 0.04em;
+  }
+
+  .api-key-banner input:focus { border-color: var(--accent); }
+
+  .api-key-tip {
+    font-size: 10px;
+    color: var(--muted);
+    width: 100%;
+    margin-top: 2px;
+  }
+
+  .mode-btn {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    padding: 7px 14px;
+    cursor: pointer;
+    background: transparent;
+    color: var(--muted);
+    border: none;
+    transition: all 0.15s;
+  }
+  .mode-btn.active {
+    background: var(--accent);
+    color: #0e0c0a;
+  }
+  .mode-btn:not(.active):hover { color: var(--text); background: var(--surface); }
+
+  .copy-step {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--border);
+    transition: background 0.2s;
+  }
+  .copy-step.done { background: rgba(109,186,122,0.05); }
+  .copy-step.done .copy-step-num { background: var(--success); color: #0e0c0a; border-color: var(--success); }
+
+  .copy-step-num {
+    width: 26px; height: 26px;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 11px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    font-family: 'DM Mono', monospace;
+    transition: all 0.2s;
+    margin-top: 2px;
+  }
+
+  .copy-step-body { flex: 1; min-width: 0; }
+
+  .copy-step-label {
+    font-size: 11px;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .copy-step-hint {
+    color: var(--muted);
+    font-size: 10px;
+    text-transform: none;
+    letter-spacing: 0.04em;
+  }
+
+  .copy-step-value {
+    color: var(--text);
+    line-height: 1.7;
+    white-space: pre-wrap;
+    word-break: break-word;
+    font-size: 13px;
+    max-height: 120px;
+    overflow-y: auto;
+  }
+
+  .copy-step-btn {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    padding: 8px 16px;
+    cursor: pointer;
+    background: var(--surface2);
+    color: var(--muted);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    flex-shrink: 0;
+    transition: all 0.15s;
+    white-space: nowrap;
+    align-self: center;
+  }
+  .copy-step-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .copy-step-btn.copied { border-color: var(--success); color: var(--success); }
+
+  .tag-pill {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    padding: 4px 10px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    border-radius: 2px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .tag-pill:hover { border-color: var(--accent); color: var(--accent); }
+  .tag-pill.copied { border-color: var(--success); color: var(--success); }
+    font-size: 11px;
+    color: var(--success);
+    display: none;
+  }
+  .key-saved.visible { display: inline; }
+
+  @media (max-width: 600px) {
+    .two-col, .three-col { grid-template-columns: 1fr; }
+    .url-row { flex-direction: column; }
+    h1 { font-size: 22px; }
+  }
+</style>
+</head>
+<body>
+<div class="wood-stripe"></div>
+<div class="container">
+
+  <header>
+    <div class="logo-line">
+      <div class="logo-icon">🪵</div>
+      <h1>Listing Bridge</h1>
+    </div>
+    <p class="subtitle">MakerBook → Etsy · Woodworking Listing Converter</p>
+  </header>
+
+  <div class="api-key-banner">
+    <div style="display:flex;align-items:center;gap:10px;width:100%;flex-wrap:wrap;">
+      <label style="white-space:nowrap;">⚙️ AI Mode</label>
+      <div style="display:flex;gap:0;border:1px solid var(--border);border-radius:2px;overflow:hidden;flex-shrink:0;">
+        <button id="modeOllama" class="mode-btn active" onclick="setMode('ollama')">🖥 Local (Ollama)</button>
+        <button id="modeCloud" class="mode-btn" onclick="setMode('cloud')">☁️ Cloud (Anthropic)</button>
+      </div>
+    </div>
+
+    <div id="ollamaPanel" style="width:100%;">
+      <p class="api-key-tip" style="margin-bottom:8px;">Runs entirely on your computer — free, private, no internet needed for AI. Requires <strong>Ollama</strong> running locally with <strong>llama3.1</strong> downloaded.</p>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+        <label style="white-space:nowrap;">Model</label>
+        <input type="text" id="ollamaModel" value="llama3.1" style="width:160px;background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:'DM Mono',monospace;font-size:12px;padding:7px 10px;border-radius:2px;outline:none;" />
+        <button class="btn btn-secondary" style="font-size:11px;padding:7px 14px;" onclick="testOllama()">Test Connection</button>
+        <span id="ollamaStatus" style="font-size:11px;color:var(--muted);"></span>
+      </div>
+    </div>
+
+    <div id="cloudPanel" style="width:100%;display:none;">
+      <p class="api-key-tip" style="margin-bottom:8px;">Uses Anthropic's API — ~$0.005 per listing. Get a key at <strong>console.anthropic.com</strong></p>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+        <label style="white-space:nowrap;">🔑 API Key</label>
+        <input type="password" id="apiKey" placeholder="sk-ant-..." oninput="saveKey()" autocomplete="off" style="flex:1;min-width:200px;background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:'DM Mono',monospace;font-size:12px;padding:7px 10px;border-radius:2px;outline:none;" />
+        <span class="key-saved" id="keySaved">Saved ✓</span>
+      </div>
+    </div>
+  </div>
+  <div class="step">
+    <div class="step-header">
+      <div class="step-num">01</div>
+      <span class="step-title">Import from MakerBook</span>
+    </div>
+    <div class="panel">
+      <div class="input-group">
+        <label>Paste Your MakerBook Listing Text</label>
+        <textarea id="mbPaste" rows="6" placeholder="Copy everything from your MakerBook listing — title, description, price, dimensions — and paste it here. The AI will extract and reformat it automatically."></textarea>
+      </div>
+      <div class="actions-row" style="margin-top:10px;">
+        <button class="btn btn-primary" id="fetchBtn" onclick="extractFromPaste()">Extract Fields →</button>
+      </div>
+      <p class="tip" style="margin-top:10px;">On your MakerBook listing page, select all the text (Ctrl+A or Cmd+A), copy it, and paste it above.</p>
+
+      <div class="or-divider">or fill in manually</div>
+
+      <!-- Manual form -->
+      <div class="input-row" style="gap:14px;">
+        <div class="input-group">
+          <label>Listing Title</label>
+          <input type="text" id="title" placeholder="e.g. Handmade Walnut End Grain Cutting Board" oninput="updateCharCount('title','titleCount',140)" />
+          <div class="char-count" id="titleCount">0 / 140</div>
+        </div>
+
+        <div class="input-group">
+          <label>Description</label>
+          <textarea id="description" rows="5" placeholder="Describe the piece — wood species, finish, dimensions, care instructions..." oninput="updateCharCount('description','descCount',2000)"></textarea>
+          <div class="char-count" id="descCount">0 / 2000</div>
+        </div>
+
+        <div class="three-col">
+          <div class="input-group">
+            <label>MakerBook Price ($)</label>
+            <input type="number" id="price" placeholder="0.00" min="0" step="0.01" oninput="updateEtsyPreview()" />
+          </div>
+          <div class="input-group">
+            <label>Etsy Markup — <span id="markupLabel">10%</span></label>
+            <div style="display:flex;align-items:center;gap:10px;margin-top:4px;">
+              <input type="range" id="markupSlider" min="0" max="100" value="10" step="1"
+                oninput="updateMarkup(this.value)"
+                style="flex:1;accent-color:var(--accent);cursor:pointer;height:4px;" />
+            </div>
+            <div style="font-size:11px;color:var(--accent);margin-top:5px;" id="etsyPricePreview">Etsy price: —</div>
+          </div>
+          <div class="input-group">
+            <label>Quantity</label>
+            <input type="number" id="quantity" placeholder="1" min="1" value="1" />
+          </div>
+        </div>
+          <div class="input-group">
+            <label>Category</label>
+            <select id="category">
+              <option value="">-- Select --</option>
+              <option>Cutting Boards</option>
+              <option>Serving Boards</option>
+              <option>Charcuterie Boards</option>
+              <option>Coffee Tables</option>
+              <option>End Tables</option>
+              <option>Shelving</option>
+              <option>Wooden Bowls</option>
+              <option>Kitchen Utensils</option>
+              <option>Home Décor</option>
+              <option>Custom / Other</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="two-col">
+          <div class="input-group">
+            <label>Shipping Box Size (L × W × H)</label>
+            <input type="text" id="dimensions" placeholder='e.g. 20" × 14" × 4" (box size for shipping)' />
+          </div>
+          <div class="input-group">
+            <label>Weight (lbs, for shipping)</label>
+            <input type="number" id="weight" placeholder="e.g. 3.5" min="0" step="0.1" />
+          </div>
+        </div>
+
+        <div class="input-group">
+          <label>Wood Species / Materials</label>
+          <input type="text" id="materials" placeholder="e.g. Hard maple, walnut, cherry — food-safe mineral oil finish" />
+        </div>
+
+        <div class="input-group">
+          <label>Etsy Tags <span style="color:var(--muted);font-size:10px;">(up to 13 — click to add)</span></label>
+          <div class="tag-chips" id="tagChips">
+            <span class="chip" onclick="toggleTag(this)">cutting board</span>
+            <span class="chip" onclick="toggleTag(this)">handmade</span>
+            <span class="chip" onclick="toggleTag(this)">wood gift</span>
+            <span class="chip" onclick="toggleTag(this)">walnut</span>
+            <span class="chip" onclick="toggleTag(this)">maple</span>
+            <span class="chip" onclick="toggleTag(this)">cherry wood</span>
+            <span class="chip" onclick="toggleTag(this)">kitchen gift</span>
+            <span class="chip" onclick="toggleTag(this)">end grain</span>
+            <span class="chip" onclick="toggleTag(this)">charcuterie</span>
+            <span class="chip" onclick="toggleTag(this)">serving board</span>
+            <span class="chip" onclick="toggleTag(this)">woodworking</span>
+            <span class="chip" onclick="toggleTag(this)">housewarming</span>
+            <span class="chip" onclick="toggleTag(this)">live edge</span>
+            <span class="chip" onclick="toggleTag(this)">custom wood</span>
+          </div>
+          <div id="tagCount" style="font-size:10px;color:var(--muted);margin-top:6px;">0 / 13 tags selected</div>
+        </div>
+
+        <div class="input-group">
+          <label>Processing Time</label>
+          <select id="processing">
+            <option value="Ready to ship in 1–3 business days">Ready to ship in 1–3 business days</option>
+            <option value="Ready to ship in 3–5 business days">Ready to ship in 3–5 business days</option>
+            <option value="Made to order: ships in 1–2 weeks">Made to order: ships in 1–2 weeks</option>
+            <option value="Made to order: ships in 2–4 weeks">Made to order: ships in 2–4 weeks</option>
+            <option value="Custom order: contact for timeline">Custom order: contact for timeline</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 2: Generate -->
+  <div class="step">
+    <div class="step-header">
+      <div class="step-num">02</div>
+      <span class="step-title">Generate Etsy Listing</span>
+    </div>
+    <div class="actions-row">
+      <button class="btn btn-primary" onclick="generateListing()">Generate Etsy Listing →</button>
+      <button class="btn btn-secondary" onclick="clearAll()">Clear All</button>
+    </div>
+  </div>
+
+  <!-- STATUS + ERROR -->
+  <div class="status-bar" id="statusBar">
+    <div class="spinner"></div>
+    <span id="statusText">Working...</span>
+  </div>
+  <div class="error-msg" id="errorMsg"></div>
+
+  <!-- STEP 3: Output -->
+  <div class="output-section" id="outputSection">
+    <div class="step">
+      <div class="step-header">
+        <div class="step-num">03</div>
+        <span class="step-title">Your Etsy Listing</span>
+      </div>
+
+      <div class="output-card">
+        <div class="output-card-header">
+          <div class="platform-label">
+            <div class="platform-dot"></div>
+            Etsy — Ready to Post
+          </div>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+            <button class="btn btn-copy" id="etsyConnectBtn" onclick="connectEtsy()">🔗 Connect Etsy</button>
+            <button class="btn btn-primary" id="etsyPostBtn" onclick="postToEtsy()" style="display:none;font-size:11px;padding:8px 14px;">Post to Etsy →</button>
+            <button class="btn btn-secondary" onclick="exportCSV()" style="font-size:11px;padding:8px 14px;">⬇ Export CSV</button>
+            <button class="btn btn-copy" onclick="copyAll()">Copy All Fields</button>
+          </div>
+        </div>
+        <div id="etsyAuthStatus" style="padding:10px 18px;font-size:11px;color:var(--muted);border-bottom:1px solid var(--border);display:none;"></div>
+
+        <!-- Guided copy panel -->
+        <div style="padding:14px 18px;background:var(--surface2);border-bottom:1px solid var(--border);">
+          <div style="font-size:11px;color:var(--muted);letter-spacing:0.08em;text-transform:uppercase;">Step-by-step — copy each field into Etsy in order</div>
+          <div style="font-size:10px;color:var(--muted);margin-top:4px;">Open <a href="https://www.etsy.com/sell" target="_blank" style="color:var(--accent);">etsy.com/sell → Add a listing</a> in another tab, then copy each field below.</div>
+        </div>
+
+        <div class="copy-step" id="step-title">
+          <div class="copy-step-num">1</div>
+          <div class="copy-step-body">
+            <div class="copy-step-label">Title <span class="copy-step-hint">Paste into: Listing title</span></div>
+            <div class="copy-step-value" id="outTitle">—</div>
+          </div>
+          <button class="copy-step-btn" onclick="copyStep('outTitle', this)">Copy</button>
+        </div>
+
+        <div class="copy-step" id="step-desc">
+          <div class="copy-step-num">2</div>
+          <div class="copy-step-body">
+            <div class="copy-step-label">Description <span class="copy-step-hint">Paste into: About this listing</span></div>
+            <div class="copy-step-value" id="outDesc">—</div>
+          </div>
+          <button class="copy-step-btn" onclick="copyStep('outDesc', this)">Copy</button>
+        </div>
+
+        <div class="copy-step" id="step-price">
+          <div class="copy-step-num">3</div>
+          <div class="copy-step-body">
+            <div class="copy-step-label">Price <span class="copy-step-hint">Paste into: Price</span></div>
+            <div class="copy-step-value" id="outPrice">—</div>
+          </div>
+          <button class="copy-step-btn" onclick="copyStepPrice(this)">Copy</button>
+        </div>
+
+        <div class="copy-step" id="step-category">
+          <div class="copy-step-num">4</div>
+          <div class="copy-step-body">
+            <div class="copy-step-label">Category <span class="copy-step-hint">Select in: Category dropdown</span></div>
+            <div class="copy-step-value" id="outCategory">—</div>
+          </div>
+          <button class="copy-step-btn" onclick="copyStep('outCategory', this)">Copy</button>
+        </div>
+
+        <div class="copy-step" id="step-tags">
+          <div class="copy-step-num">5</div>
+          <div class="copy-step-body">
+            <div class="copy-step-label">Tags <span class="copy-step-hint">Paste into: Tags (one at a time)</span></div>
+            <div class="copy-step-value" id="outTags">—</div>
+            <div id="tagButtons" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;"></div>
+          </div>
+          <button class="copy-step-btn" onclick="copyStep('outTags', this)">Copy All</button>
+        </div>
+
+        <div class="copy-step" id="step-materials">
+          <div class="copy-step-num">6</div>
+          <div class="copy-step-body">
+            <div class="copy-step-label">Materials <span class="copy-step-hint">Paste into: Materials</span></div>
+            <div class="copy-step-value" id="outMaterials">—</div>
+          </div>
+          <button class="copy-step-btn" onclick="copyStep('outMaterials', this)">Copy</button>
+        </div>
+
+        <div class="copy-step" id="step-processing">
+          <div class="copy-step-num">7</div>
+          <div class="copy-step-body">
+            <div class="copy-step-label">Processing Time <span class="copy-step-hint">Select in: Processing time</span></div>
+            <div class="copy-step-value" id="outProcessing">—</div>
+          </div>
+          <button class="copy-step-btn" onclick="copyStep('outProcessing', this)">Copy</button>
+        </div>
+
+        <div class="copy-step" id="step-shipping">
+          <div class="copy-step-num">8</div>
+          <div class="copy-step-body">
+            <div class="copy-step-label">Shipping Note <span class="copy-step-hint">Reference for shipping profile</span></div>
+            <div class="copy-step-value" id="outShipping">—</div>
+          </div>
+          <button class="copy-step-btn" onclick="copyStep('outShipping', this)">Copy</button>
+        </div>
+
+        <div style="padding:14px 18px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;">
+          <button class="btn btn-copy" onclick="copyAll()">Copy All Fields as Text</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const ANTHROPIC_URL = "https://api.anthropic.com/v1/messages";
+const OLLAMA_URL = "http://localhost:11434/api/chat";
+let currentMode = 'ollama';
+
+function setMode(mode) {
+  currentMode = mode;
+  document.getElementById('modeOllama').classList.toggle('active', mode === 'ollama');
+  document.getElementById('modeCloud').classList.toggle('active', mode === 'cloud');
+  document.getElementById('ollamaPanel').style.display = mode === 'ollama' ? 'block' : 'none';
+  document.getElementById('cloudPanel').style.display = mode === 'cloud' ? 'block' : 'none';
+}
+
+async function testOllama() {
+  const status = document.getElementById('ollamaStatus');
+  status.style.color = 'var(--muted)';
+  status.textContent = 'Testing...';
+  try {
+    const res = await fetch('http://localhost:11434/api/tags');
+    if (res.ok) {
+      const data = await res.json();
+      const models = (data.models || []).map(m => m.name).join(', ');
+      status.style.color = 'var(--success)';
+      status.textContent = '✓ Connected' + (models ? ' — ' + models : '');
+    } else {
+      throw new Error('Not reachable');
+    }
+  } catch(e) {
+    status.style.color = '#e86060';
+    status.textContent = '✗ Ollama not running — start it and try again';
+  }
+}
+
+async function callAI(prompt) {
+  if (currentMode === 'ollama') {
+    const model = document.getElementById('ollamaModel').value.trim() || 'llama3.1';
+    const res = await fetch(OLLAMA_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model,
+        messages: [{ role: 'user', content: prompt }],
+        stream: false
+      })
+    });
+    if (!res.ok) throw new Error(`Ollama error ${res.status} — is it running?`);
+    const data = await res.json();
+    return data.message?.content || '';
+  } else {
+    const key = document.getElementById('apiKey').value.trim();
+    if (!key) throw new Error('Please enter your Anthropic API key.');
+    const res = await fetch(ANTHROPIC_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'anthropic-version': '2023-06-01',
+        'x-api-key': key,
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+    if (!res.ok) throw new Error(`Anthropic API error ${res.status}`);
+    const data = await res.json();
+    return data.content.map(b => b.text || '').join('');
+  }
+}
+
+function updateMarkup(val) {
+  document.getElementById('markupLabel').textContent = val + '%';
+  updateEtsyPreview();
+}
+
+function updateEtsyPreview() {
+  const price = parseFloat(document.getElementById('price').value);
+  const markup = parseInt(document.getElementById('markupSlider').value);
+  const preview = document.getElementById('etsyPricePreview');
+  if (!isNaN(price) && price > 0) {
+    const etsyPrice = (Math.ceil(price * (1 + markup / 100) * 100) / 100).toFixed(2);
+    preview.textContent = `Etsy price: $${etsyPrice}`;
+  } else {
+    preview.textContent = 'Etsy price: —';
+  }
+}
+
+function saveKey() {
+  const saved = document.getElementById('keySaved');
+  saved.classList.add('visible');
+  setTimeout(() => saved.classList.remove('visible'), 2000);
+}
+
+// ---- TAG LOGIC ----
+function toggleTag(el) {
+  const active = document.querySelectorAll('.chip.active');
+  if (el.classList.contains('active')) {
+    el.classList.remove('active');
+  } else if (active.length < 13) {
+    el.classList.add('active');
+  }
+  const count = document.querySelectorAll('.chip.active').length;
+  document.getElementById('tagCount').textContent = `${count} / 13 tags selected`;
+}
+
+function getSelectedTags() {
+  return Array.from(document.querySelectorAll('.chip.active')).map(c => c.textContent.trim());
+}
+
+// ---- CHAR COUNTS ----
+function updateCharCount(inputId, countId, max) {
+  const len = document.getElementById(inputId).value.length;
+  const el = document.getElementById(countId);
+  el.textContent = `${len} / ${max}`;
+  el.className = 'char-count' + (len > max ? ' over' : len > max * 0.85 ? ' warn' : '');
+}
+
+// ---- STATUS ----
+function setStatus(msg) {
+  const bar = document.getElementById('statusBar');
+  bar.classList.add('active');
+  document.getElementById('statusText').textContent = msg;
+}
+function clearStatus() {
+  document.getElementById('statusBar').classList.remove('active');
+}
+function showError(msg) {
+  const el = document.getElementById('errorMsg');
+  el.textContent = msg;
+  el.classList.add('visible');
+}
+function clearError() {
+  document.getElementById('errorMsg').classList.remove('visible');
+}
+
+// ---- EXTRACT FROM PASTED TEXT ----
+async function extractFromPaste() {
+  const pastedText = document.getElementById('mbPaste').value.trim();
+  if (!pastedText) { showError('Please paste your MakerBook listing text first.'); return; }
+  clearError();
+  setStatus('Extracting listing details...');
+
+  const prompt = `You are a listing data extractor. Extract product listing fields from this raw text copied from a marketplace listing page.
+
+Return ONLY a JSON object with these keys (use empty string if not found):
+- title
+- description
+- price (number only, no dollar sign or currency symbol)
+- dimensions
+- materials
+- category
+
+Text to extract from:
+"""
+${pastedText}
+"""
+
+Return ONLY the JSON object, no markdown, no extra text.`;
+
+  try {
+    const text = await callAI(prompt);
+    const clean = text.replace(/```json|```/g, '').trim();
+
+    let parsed;
+    try { parsed = JSON.parse(clean); }
+    catch(e) {
+      const match = clean.match(/\{[\s\S]*\}/);
+      if (match) parsed = JSON.parse(match[0]);
+      else throw new Error('Could not parse extracted data.');
+    }
+
+    if (parsed.title) document.getElementById('title').value = parsed.title;
+    if (parsed.description) document.getElementById('description').value = parsed.description;
+    if (parsed.price) document.getElementById('price').value = parsed.price;
+    if (parsed.dimensions) document.getElementById('dimensions').value = parsed.dimensions;
+    if (parsed.materials) document.getElementById('materials').value = parsed.materials;
+
+    updateCharCount('title','titleCount',140);
+    updateCharCount('description','descCount',2000);
+    clearStatus();
+
+  } catch(err) {
+    clearStatus();
+    showError('Extraction failed: ' + err.message + '. Try filling in the fields manually.');
+  }
+}
+
+// ---- OLD FETCH (kept for reference) ----
+async function fetchListing() {
+  const url = document.getElementById('mbUrl').value.trim();
+  if (!url) { showError('Please enter a MakerBook listing URL.'); return; }
+  clearError();
+  setStatus('Fetching MakerBook listing...');
+
+  try {
+    const prompt = `You are a listing data extractor. I will give you a URL for a product listing on MakerBook (a woodworking/maker marketplace). 
+    
+Please extract the following fields from that listing page and return ONLY a JSON object with these keys (use empty string if not found):
+- title
+- description  
+- price (number only, no dollar sign)
+- dimensions
+- materials
+- category
+
+URL: ${url}
+
+Return ONLY the JSON object, no other text, no markdown fences.`;
+
+    const text = await callAI(prompt);
+    const clean = text.replace(/```json|```/g, '').trim();
+    let parsed;
+    try { parsed = JSON.parse(clean); }
+    catch(e) {
+      const match = clean.match(/\{[\s\S]*\}/);
+      if (match) parsed = JSON.parse(match[0]);
+      else throw new Error('Could not parse listing data from response.');
+    }
+
+    if (parsed.title) document.getElementById('title').value = parsed.title;
+    if (parsed.description) document.getElementById('description').value = parsed.description;
+    if (parsed.price) document.getElementById('price').value = parsed.price;
+    if (parsed.dimensions) document.getElementById('dimensions').value = parsed.dimensions;
+    if (parsed.materials) document.getElementById('materials').value = parsed.materials;
+
+    updateCharCount('title','titleCount',140);
+    updateCharCount('description','descCount',2000);
+    clearStatus();
+  } catch(err) {
+    clearStatus();
+    showError('Could not extract listing. Try filling in the fields manually below. (' + err.message + ')');
+  }
+}
+
+// ---- GENERATE ETSY LISTING ----
+async function generateListing() {
+  clearError();
+
+  const title = document.getElementById('title').value.trim();
+  const description = document.getElementById('description').value.trim();
+  const price = document.getElementById('price').value.trim();
+  const dimensions = document.getElementById('dimensions').value.trim();
+  const materials = document.getElementById('materials').value.trim();
+  const quantity = document.getElementById('quantity').value.trim();
+  const category = document.getElementById('category').value.trim();
+  const processing = document.getElementById('processing').value.trim();
+  const tags = getSelectedTags();
+
+  if (!title && !description) {
+    showError('Please enter at least a title or description before generating.');
+    return;
+  }
+
+  setStatus('Generating your Etsy listing...');
+
+  const inputData = { title, description, price, dimensions, materials, quantity, category, processing, tags };
+
+  const categoryOptions = ['Cutting Boards','Serving Boards','Charcuterie Boards','Coffee Tables','End Tables','Shelving','Wooden Bowls','Kitchen Utensils','Home Décor','Custom / Other'];
+
+  // Escape description for safe JSON embedding
+  const safeDesc = description.replace(/\\/g,'\\\\').replace(/"/g,'\\"').replace(/\n/g,'\\n').replace(/\r/g,'');
+
+  const prompt = `You are a JSON generator. Output ONLY a single valid JSON object. No explanation, no markdown, no code fences, no text before or after. Just the raw JSON.
+
+Required JSON keys:
+- "title": string — copy input title exactly, no changes
+- "description": string — fix spelling and punctuation only, do not rewrite
+- "category": string — pick best match from: ${categoryOptions.map(c=>`"${c}"`).join(', ')}
+- "tags": array of 13 short strings (max 20 chars each) for Etsy SEO
+- "materials": string — comma separated materials list
+- "shipping_note": string — one sentence about shipping
+
+Input data:
+TITLE: ${title}
+DESCRIPTION: ${safeDesc}
+PRICE: ${price}
+DIMENSIONS: ${dimensions}
+MATERIALS: ${materials}
+CATEGORY: ${category}
+TAGS ALREADY SELECTED: ${tags.join(', ')}
+
+Respond with ONLY the JSON object starting with { and ending with }. Nothing else.`;
+
+  try {
+    const raw = await callAI(prompt);
+
+    // Aggressively clean the response for local model quirks
+    let clean = raw
+      .replace(/```json/gi, '')
+      .replace(/```/g, '')
+      .replace(/^[^{]*/s, '')   // strip anything before first {
+      .trim();
+
+    // Extract just the JSON object
+    const start = clean.indexOf('{');
+    const end = clean.lastIndexOf('}');
+    if (start === -1 || end === -1) throw new Error('No JSON object found in response. Try again.');
+    clean = clean.substring(start, end + 1);
+
+    // Fix common local model JSON mistakes: trailing commas
+    clean = clean.replace(/,\s*([}\]])/g, '$1');
+
+    let parsed;
+    try {
+      parsed = JSON.parse(clean);
+    } catch(e) {
+      // Last resort: try to extract fields manually
+      console.error('JSON parse failed:', e.message, '\nRaw:', clean);
+      throw new Error('Model returned malformed JSON. Try generating again — local models occasionally need a second attempt.');
+    }
+
+    // Populate output
+    document.getElementById('outTitle').textContent = title || parsed.title;
+    document.getElementById('outDesc').textContent = parsed.description || description;
+
+    const tagsArr = Array.isArray(parsed.tags) ? parsed.tags : tags;
+    document.getElementById('outTags').textContent = tagsArr.join(', ');
+
+    // Build individual tag copy pills
+    const tagButtons = document.getElementById('tagButtons');
+    tagButtons.innerHTML = '';
+    tagsArr.forEach(tag => {
+      const btn = document.createElement('button');
+      btn.className = 'tag-pill';
+      btn.textContent = tag;
+      btn.onclick = async function() {
+        await navigator.clipboard.writeText(tag);
+        btn.classList.add('copied');
+        btn.textContent = tag + ' ✓';
+        setTimeout(() => { btn.classList.remove('copied'); btn.textContent = tag; }, 2000);
+      };
+      tagButtons.appendChild(btn);
+    });
+
+    const markup = parseInt(document.getElementById('markupSlider').value);
+    const etsyPrice = price ? (Math.ceil(parseFloat(price) * (1 + markup / 100) * 100) / 100).toFixed(2) : null;
+    document.getElementById('outPrice').textContent = etsyPrice ? `$${etsyPrice}  (MakerBook: $${parseFloat(price).toFixed(2)} + ${markup}%)` : '—';
+    document.getElementById('outMaterials').textContent = parsed.materials || materials || '—';
+    document.getElementById('outProcessing').textContent = processing || '—';
+    document.getElementById('outShipping').textContent = (parsed.shipping_note || '') + (dimensions ? `  |  ${dimensions}` : '');
+
+    // Auto-select and display category
+    if (parsed.category) {
+      document.getElementById('outCategory').textContent = parsed.category;
+      const sel = document.getElementById('category');
+      for (let i = 0; i < sel.options.length; i++) {
+        if (sel.options[i].text === parsed.category) { sel.selectedIndex = i; break; }
+      }
+    }
+
+    // Reset step done states
+    document.querySelectorAll('.copy-step').forEach(s => s.classList.remove('done'));
+    document.getElementById('outShipping').textContent = (parsed.shipping_note || '') + (dimensions ? `  |  ${dimensions}` : '');
+
+    document.getElementById('outputSection').classList.add('visible');
+    document.getElementById('outputSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    clearStatus();
+
+  } catch(err) {
+    clearStatus();
+    showError('Generation failed: ' + err.message + '. Check your inputs and try again.');
+  }
+}
+
+
+// ---- ETSY OAUTH ----
+const ETSY_KEY = 'zg9wi69bf0iffmfjebefa14o';
+const ETSY_SCOPES = 'listings_w listings_r shops_r';
+let etsyAccessToken = null;
+let etsyShopId = null;
+let codeVerifier = null;
+
+function base64urlEncode(buffer) {
+  return btoa(String.fromCharCode(...new Uint8Array(buffer)))
+    .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+async function generatePKCE() {
+  const verifier = base64urlEncode(crypto.getRandomValues(new Uint8Array(32)));
+  const encoded = new TextEncoder().encode(verifier);
+  const digest = await crypto.subtle.digest('SHA-256', encoded);
+  const challenge = base64urlEncode(digest);
+  return { verifier, challenge };
+}
+
+async function connectEtsy() {
+  const { verifier, challenge } = await generatePKCE();
+  codeVerifier = verifier;
+  const state = base64urlEncode(crypto.getRandomValues(new Uint8Array(8)));
+  sessionStorage.setItem('etsy_state', state);
+  sessionStorage.setItem('etsy_verifier', verifier);
+
+  const params = new URLSearchParams({
+    response_type: 'code',
+    client_id: ETSY_KEY,
+    redirect_uri: 'http://localhost',
+    scope: ETSY_SCOPES,
+    state,
+    code_challenge: challenge,
+    code_challenge_method: 'S256'
+  });
+
+  const authUrl = `https://www.etsy.com/oauth/connect?${params}`;
+  const popup = window.open(authUrl, 'etsy_auth', 'width=600,height=700');
+
+  setEtsyStatus('Waiting for Etsy login... After approving, copy the full URL from the browser bar and paste it below.', 'var(--muted)');
+  document.getElementById('etsyAuthStatus').style.display = 'block';
+
+  // Show URL paste box
+  showCallbackInput();
+}
+
+function showCallbackInput() {
+  const status = document.getElementById('etsyAuthStatus');
+  status.innerHTML = `
+    <div style="margin-bottom:6px;color:var(--accent);">After approving on Etsy, copy the full redirect URL from your browser and paste it here:</div>
+    <div style="display:flex;gap:8px;">
+      <input id="callbackUrl" type="text" placeholder="http://localhost/?code=...&state=..." 
+        style="flex:1;background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:'DM Mono',monospace;font-size:11px;padding:7px 10px;border-radius:2px;outline:none;" />
+      <button class="btn btn-primary" style="font-size:11px;padding:7px 14px;" onclick="handleCallbackUrl()">Submit</button>
+    </div>
+    <div style="font-size:10px;color:var(--muted);margin-top:5px;">The URL will start with http://localhost/?code= — paste the whole thing.</div>
+  `;
+  status.style.display = 'block';
+}
+
+async function handleCallbackUrl() {
+  const raw = document.getElementById('callbackUrl').value.trim();
+  let code, state;
+  try {
+    const url = new URL(raw);
+    code = url.searchParams.get('code');
+    state = url.searchParams.get('state');
+  } catch(e) {
+    setEtsyStatus('Invalid URL — paste the full redirect URL including http://', '#e86060');
+    return;
+  }
+
+  const savedState = sessionStorage.getItem('etsy_state');
+  const verifier = sessionStorage.getItem('etsy_verifier');
+
+  if (state !== savedState) {
+    setEtsyStatus('State mismatch — please try connecting again.', '#e86060');
+    return;
+  }
+
+  if (!code) {
+    setEtsyStatus('No code found in URL — did you approve the app on Etsy?', '#e86060');
+    return;
+  }
+
+  setEtsyStatus('Exchanging code for access token...', 'var(--muted)');
+
+  try {
+    const res = await fetch('https://api.etsy.com/v3/public/oauth/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        grant_type: 'authorization_code',
+        client_id: ETSY_KEY,
+        redirect_uri: 'http://localhost',
+        code,
+        code_verifier: verifier
+      })
+    });
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error_description || data.error || 'Token exchange failed');
+
+    etsyAccessToken = data.access_token;
+
+    // Get shop ID
+    const meRes = await fetch('https://openapi.etsy.com/v3/application/users/me', {
+      headers: { 'x-api-key': ETSY_KEY, 'Authorization': `Bearer ${etsyAccessToken}` }
+    });
+    const meData = await meRes.json();
+    etsyShopId = meData.shop_id || meData.primary_email; // fallback
+
+    // Get actual shop id
+    const shopRes = await fetch(`https://openapi.etsy.com/v3/application/users/${meData.user_id}/shops`, {
+      headers: { 'x-api-key': ETSY_KEY, 'Authorization': `Bearer ${etsyAccessToken}` }
+    });
+    const shopData = await shopRes.json();
+    etsyShopId = shopData.shop_id;
+
+    setEtsyStatus('✓ Connected to Etsy shop: ' + (shopData.shop_name || etsyShopId), 'var(--success)');
+    document.getElementById('etsyConnectBtn').textContent = '✓ Etsy Connected';
+    document.getElementById('etsyConnectBtn').style.borderColor = 'var(--success)';
+    document.getElementById('etsyConnectBtn').style.color = 'var(--success)';
+    document.getElementById('etsyPostBtn').style.display = 'inline-block';
+
+  } catch(err) {
+    setEtsyStatus('Connection failed: ' + err.message, '#e86060');
+  }
+}
+
+function setEtsyStatus(msg, color) {
+  const el = document.getElementById('etsyAuthStatus');
+  el.style.display = 'block';
+  el.style.color = color || 'var(--muted)';
+  if (!msg.includes('<')) el.textContent = msg;
+}
+
+async function postToEtsy() {
+  if (!etsyAccessToken || !etsyShopId) {
+    setEtsyStatus('Connect to Etsy first.', '#e86060');
+    return;
+  }
+
+  const title = document.getElementById('outTitle').textContent;
+  const description = document.getElementById('outDesc').textContent;
+  const tagsRaw = document.getElementById('outTags').textContent;
+  const priceRaw = document.getElementById('outPrice').textContent;
+  const materials = document.getElementById('outMaterials').textContent;
+
+  if (!title || title === '—') { setEtsyStatus('Generate a listing first.', '#e86060'); return; }
+
+  // Parse Etsy price from output string like "$55.00  (MakerBook: $50.00 + 10%)"
+  const priceMatch = priceRaw.match(/^\$([0-9.]+)/);
+  const price = priceMatch ? parseFloat(priceMatch[1]) : null;
+  if (!price) { setEtsyStatus('Could not read price — make sure price is filled in.', '#e86060'); return; }
+
+  const tags = tagsRaw.split(',').map(t => t.trim()).filter(Boolean).slice(0, 13);
+  const materialsArr = materials !== '—' ? materials.split(',').map(m => m.trim()).filter(Boolean) : [];
+
+  setEtsyStatus('Posting to Etsy...', 'var(--muted)');
+
+  const body = {
+    title: title.substring(0, 140),
+    description,
+    price: price,
+    quantity: parseInt(document.getElementById('quantity').value) || 1,
+    who_made: 'i_did',
+    when_made: 'made_to_order',
+    taxonomy_id: 68887443, // Handmade > Home & Living > Kitchen > Cutting Boards (Etsy default)
+    tags,
+    materials: materialsArr,
+    shipping_profile_id: null, // seller must set shipping profile in Etsy after posting
+    state: 'draft' // post as draft so seller can review before going live
+  };
+
+  try {
+    const res = await fetch(`https://openapi.etsy.com/v3/application/shops/${etsyShopId}/listings`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': ETSY_KEY,
+        'Authorization': `Bearer ${etsyAccessToken}`
+      },
+      body: JSON.stringify(body)
+    });
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error_description || data.error || JSON.stringify(data));
+
+    const listingId = data.listing_id;
+    setEtsyStatus(`✓ Draft listing created! Open it in Etsy to add photos and set shipping, then publish. <a href="https://www.etsy.com/your/listings/draft" target="_blank" style="color:var(--accent);">View drafts →</a>`, 'var(--success)');
+    document.getElementById('etsyAuthStatus').innerHTML = document.getElementById('etsyAuthStatus').innerHTML; // trigger re-render
+
+  } catch(err) {
+    setEtsyStatus('Post failed: ' + err.message, '#e86060');
+  }
+}
+
+// ---- COPY HELPERS ----
+async function copyStep(id, btn) {
+  const text = document.getElementById(id).textContent;
+  await navigator.clipboard.writeText(text);
+  const label = id === 'outTags' ? 'Copy All' : 'Copy';
+  btn.textContent = 'Copied ✓';
+  btn.classList.add('copied');
+  const step = btn.closest('.copy-step');
+  if (step) step.classList.add('done');
+  setTimeout(() => { btn.textContent = label; btn.classList.remove('copied'); }, 2000);
+}
+
+async function copyStepPrice(btn) {
+  const raw = document.getElementById('outPrice').textContent;
+  const match = raw.match(/^\$([0-9.]+)/);
+  const price = match ? match[1] : raw;
+  await navigator.clipboard.writeText(price);
+  btn.textContent = 'Copied ✓';
+  btn.classList.add('copied');
+  const step = btn.closest('.copy-step');
+  if (step) step.classList.add('done');
+  setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000);
+}
+
+async function copyField(id, btn) {
+  const text = document.getElementById(id).textContent;
+  await navigator.clipboard.writeText(text);
+  btn.textContent = 'Copied ✓';
+  btn.classList.add('copied');
+  setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000);
+}
+
+async function copyAll() {
+  const fields = ['outTitle','outDesc','outTags','outPrice','outMaterials','outProcessing','outShipping'];
+  const labels = ['TITLE','DESCRIPTION','TAGS','PRICE','MATERIALS','PROCESSING TIME','SHIPPING'];
+  const text = fields.map((id, i) => `--- ${labels[i]} ---\n${document.getElementById(id).textContent}`).join('\n\n');
+  await navigator.clipboard.writeText(text);
+  const btn = document.querySelector('[onclick="copyAll()"]');
+  if (btn) {
+    btn.textContent = 'Copied ✓';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = 'Copy All Fields as Text'; btn.classList.remove('copied'); }, 2000);
+  }
+}
+
+// ---- EXPORT CSV ----
+function exportCSV() {
+  const title = document.getElementById('outTitle').textContent;
+  if (!title || title === '—') { showError('Generate a listing first before exporting.'); return; }
+
+  const description = document.getElementById('outDesc').textContent;
+  const tagsRaw = document.getElementById('outTags').textContent;
+  const priceRaw = document.getElementById('outPrice').textContent;
+  const materials = document.getElementById('outMaterials').textContent;
+  const processing = document.getElementById('outProcessing').textContent;
+  const quantity = document.getElementById('quantity').value || '1';
+  const category = document.getElementById('category').value || '';
+
+  const priceMatch = priceRaw.match(/^\$([0-9.]+)/);
+  const price = priceMatch ? priceMatch[1] : '';
+
+  const tags = tagsRaw.split(',').map(t => t.trim()).filter(Boolean).slice(0, 13);
+  // Etsy CSV needs tags as separate tag1, tag2... columns
+  const tagCols = Array.from({length: 13}, (_, i) => tags[i] || '');
+
+  function csvCell(val) {
+    if (val === null || val === undefined) return '';
+    const str = String(val).replace(/"/g, '""');
+    return `"${str}"`;
+  }
+
+  // Etsy bulk upload CSV headers (standard Etsy format)
+  const headers = [
+    'TITLE','DESCRIPTION','PRICE','QUANTITY','TAGS1','TAGS2','TAGS3','TAGS4','TAGS5',
+    'TAGS6','TAGS7','TAGS8','TAGS9','TAGS10','TAGS11','TAGS12','TAGS13',
+    'MATERIALS','WHO_MADE','IS_SUPPLY','WHEN_MADE','CATEGORY','STATE'
+  ];
+
+  const row = [
+    title,
+    description,
+    price,
+    quantity,
+    ...tagCols,
+    materials !== '—' ? materials : '',
+    'i_did',
+    'false',
+    'made_to_order',
+    category,
+    'draft'
+  ];
+
+  const csv = [
+    headers.map(csvCell).join(','),
+    row.map(csvCell).join(',')
+  ].join('\n');
+
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  const safeTitle = title.substring(0, 40).replace(/[^a-z0-9]/gi, '_').toLowerCase();
+  a.download = `etsy_listing_${safeTitle}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+
+function clearAll() {
+  ['title','description','price','quantity','dimensions','weight','materials','mbUrl'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+  document.querySelectorAll('.chip.active').forEach(c => c.classList.remove('active'));
+  document.getElementById('tagCount').textContent = '0 / 13 tags selected';
+  document.getElementById('outputSection').classList.remove('visible');
+  updateCharCount('title','titleCount',140);
+  updateCharCount('description','descCount',2000);
+  clearError(); clearStatus();
+}
+</script>
+</body>
+</html>
