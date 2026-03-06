@@ -1,0 +1,1118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MakerBook → Etsy Listing Converter</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0e0c0a;
+    --surface: #1a1714;
+    --surface2: #242018;
+    --border: #3a3428;
+    --accent: #c8a96e;
+    --accent2: #e8c97e;
+    --text: #e8e0d0;
+    --muted: #8a7f6e;
+    --success: #6dba7a;
+    --grain: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    min-height: 100vh;
+    position: relative;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: var(--grain);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .wood-stripe {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #6b3f1a, #c8a96e, #8b5e2a, #e8c97e, #6b3f1a);
+    background-size: 300% 100%;
+    animation: grain-shift 8s linear infinite;
+  }
+
+  @keyframes grain-shift { 0%{background-position:0% 0%} 100%{background-position:300% 0%} }
+
+  .container {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 48px 24px 80px;
+    position: relative;
+    z-index: 1;
+  }
+
+  header {
+    margin-bottom: 48px;
+    animation: fadeUp 0.6s ease both;
+  }
+
+  .logo-line {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 8px;
+  }
+
+  .logo-icon {
+    width: 36px; height: 36px;
+    background: var(--accent);
+    clip-path: polygon(20% 0%, 80% 0%, 100% 20%, 100% 80%, 80% 100%, 20% 100%, 0% 80%, 0% 20%);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+  }
+
+  h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--accent);
+    letter-spacing: -0.5px;
+  }
+
+  .subtitle {
+    color: var(--muted);
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-top: 6px;
+  }
+
+  /* STEP LAYOUT */
+  .step {
+    margin-bottom: 32px;
+    animation: fadeUp 0.6s ease both;
+  }
+  .step:nth-child(2) { animation-delay: 0.1s; }
+  .step:nth-child(3) { animation-delay: 0.2s; }
+  .step:nth-child(4) { animation-delay: 0.3s; }
+
+  .step-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+
+  .step-num {
+    width: 26px; height: 26px;
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    font-size: 11px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    font-weight: 500;
+    letter-spacing: 0.05em;
+  }
+
+  .step-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 16px;
+    color: var(--text);
+  }
+
+  /* FORM ELEMENTS */
+  .input-row {
+    display: grid;
+    gap: 12px;
+  }
+
+  .input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  label {
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  input[type="text"],
+  input[type="number"],
+  input[type="url"],
+  textarea,
+  select {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    padding: 10px 14px;
+    outline: none;
+    width: 100%;
+    transition: border-color 0.2s, background 0.2s;
+    border-radius: 2px;
+    appearance: none;
+  }
+
+  input:focus, textarea:focus, select:focus {
+    border-color: var(--accent);
+    background: var(--surface2);
+  }
+
+  textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
+
+  .url-row {
+    display: flex;
+    gap: 10px;
+    align-items: flex-end;
+  }
+
+  .url-row .input-group { flex: 1; }
+
+  /* BUTTONS */
+  .btn {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 11px 22px;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s;
+    border-radius: 2px;
+    white-space: nowrap;
+    font-weight: 500;
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    color: #0e0c0a;
+  }
+  .btn-primary:hover { background: var(--accent2); transform: translateY(-1px); }
+  .btn-primary:active { transform: translateY(0); }
+
+  .btn-secondary {
+    background: transparent;
+    color: var(--accent);
+    border: 1px solid var(--accent);
+  }
+  .btn-secondary:hover { background: rgba(200,169,110,0.08); }
+
+  .btn-copy {
+    background: var(--surface2);
+    color: var(--muted);
+    border: 1px solid var(--border);
+    font-size: 11px;
+    padding: 8px 14px;
+    letter-spacing: 0.08em;
+  }
+  .btn-copy:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-copy.copied { border-color: var(--success); color: var(--success); }
+
+  .btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  /* PANEL / CARD */
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    padding: 20px;
+  }
+
+  /* TWO COL */
+  .two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  .three-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 12px;
+  }
+
+  /* OUTPUT SECTION */
+  .output-section {
+    display: none;
+    animation: fadeUp 0.4s ease both;
+  }
+
+  .output-section.visible { display: block; }
+
+  .output-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+    margin-bottom: 16px;
+  }
+
+  .output-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 18px;
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .platform-label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 12px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--accent);
+    font-weight: 500;
+  }
+
+  .platform-dot {
+    width: 8px; height: 8px;
+    background: var(--accent);
+    border-radius: 50%;
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+  .output-field {
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .output-field:last-child { border-bottom: none; }
+
+  .output-field-label {
+    font-size: 10px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 6px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .output-field-value {
+    color: var(--text);
+    line-height: 1.7;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  /* STATUS / LOADING */
+  .status-bar {
+    display: none;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    margin-bottom: 20px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  .status-bar.active { display: flex; }
+
+  .spinner {
+    width: 14px; height: 14px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    flex-shrink: 0;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .error-msg {
+    display: none;
+    padding: 12px 16px;
+    background: rgba(200, 80, 80, 0.1);
+    border: 1px solid rgba(200, 80, 80, 0.3);
+    border-radius: 2px;
+    color: #e88;
+    font-size: 12px;
+    margin-bottom: 20px;
+    line-height: 1.5;
+  }
+  .error-msg.visible { display: block; }
+
+  /* DIVIDER */
+  .divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 28px 0;
+  }
+
+  /* MANUAL FALLBACK */
+  .or-divider {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin: 18px 0;
+    color: var(--muted);
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+  .or-divider::before, .or-divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  .tag-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 8px;
+  }
+
+  .chip {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 11px;
+    padding: 4px 10px;
+    border-radius: 2px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .chip:hover, .chip.active {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: rgba(200,169,110,0.07);
+  }
+
+  .char-count {
+    font-size: 10px;
+    color: var(--muted);
+    text-align: right;
+    margin-top: 4px;
+  }
+
+  .char-count.warn { color: #e8a05a; }
+  .char-count.over { color: #e86060; }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* SECTION ACTIONS */
+  .actions-row {
+    display: flex;
+    gap: 10px;
+    margin-top: 14px;
+    flex-wrap: wrap;
+  }
+
+  /* TOOLTIP */
+  .tip {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 6px;
+    line-height: 1.5;
+  }
+
+  .api-key-banner {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    border-radius: 2px;
+    padding: 14px 18px;
+    margin-bottom: 32px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    animation: fadeUp 0.4s ease both;
+  }
+
+  .api-key-banner label {
+    font-size: 11px;
+    color: var(--accent);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .api-key-banner input {
+    flex: 1;
+    min-width: 200px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    padding: 8px 12px;
+    border-radius: 2px;
+    outline: none;
+    letter-spacing: 0.04em;
+  }
+
+  .api-key-banner input:focus { border-color: var(--accent); }
+
+  .api-key-tip {
+    font-size: 10px;
+    color: var(--muted);
+    width: 100%;
+    margin-top: 2px;
+  }
+
+  .mode-btn {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    padding: 7px 14px;
+    cursor: pointer;
+    background: transparent;
+    color: var(--muted);
+    border: none;
+    transition: all 0.15s;
+  }
+  .mode-btn.active {
+    background: var(--accent);
+    color: #0e0c0a;
+  }
+  .mode-btn:not(.active):hover { color: var(--text); background: var(--surface); }
+
+  .key-saved {
+    font-size: 11px;
+    color: var(--success);
+    display: none;
+  }
+  .key-saved.visible { display: inline; }
+
+  @media (max-width: 600px) {
+    .two-col, .three-col { grid-template-columns: 1fr; }
+    .url-row { flex-direction: column; }
+    h1 { font-size: 22px; }
+  }
+</style>
+</head>
+<body>
+<div class="wood-stripe"></div>
+<div class="container">
+
+  <header>
+    <div class="logo-line">
+      <div class="logo-icon">🪵</div>
+      <h1>Listing Bridge</h1>
+    </div>
+    <p class="subtitle">MakerBook → Etsy · Woodworking Listing Converter</p>
+  </header>
+
+  <div class="api-key-banner">
+    <div style="display:flex;align-items:center;gap:10px;width:100%;flex-wrap:wrap;">
+      <label style="white-space:nowrap;">⚙️ AI Mode</label>
+      <div style="display:flex;gap:0;border:1px solid var(--border);border-radius:2px;overflow:hidden;flex-shrink:0;">
+        <button id="modeOllama" class="mode-btn active" onclick="setMode('ollama')">🖥 Local (Ollama)</button>
+        <button id="modeCloud" class="mode-btn" onclick="setMode('cloud')">☁️ Cloud (Anthropic)</button>
+      </div>
+    </div>
+
+    <div id="ollamaPanel" style="width:100%;">
+      <p class="api-key-tip" style="margin-bottom:8px;">Runs entirely on your computer — free, private, no internet needed for AI. Requires <strong>Ollama</strong> running locally with <strong>llama3.1</strong> downloaded.</p>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+        <label style="white-space:nowrap;">Model</label>
+        <input type="text" id="ollamaModel" value="llama3.1" style="width:160px;background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:'DM Mono',monospace;font-size:12px;padding:7px 10px;border-radius:2px;outline:none;" />
+        <button class="btn btn-secondary" style="font-size:11px;padding:7px 14px;" onclick="testOllama()">Test Connection</button>
+        <span id="ollamaStatus" style="font-size:11px;color:var(--muted);"></span>
+      </div>
+    </div>
+
+    <div id="cloudPanel" style="width:100%;display:none;">
+      <p class="api-key-tip" style="margin-bottom:8px;">Uses Anthropic's API — ~$0.005 per listing. Get a key at <strong>console.anthropic.com</strong></p>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+        <label style="white-space:nowrap;">🔑 API Key</label>
+        <input type="password" id="apiKey" placeholder="sk-ant-..." oninput="saveKey()" autocomplete="off" style="flex:1;min-width:200px;background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:'DM Mono',monospace;font-size:12px;padding:7px 10px;border-radius:2px;outline:none;" />
+        <span class="key-saved" id="keySaved">Saved ✓</span>
+      </div>
+    </div>
+  </div>
+  <div class="step">
+    <div class="step-header">
+      <div class="step-num">01</div>
+      <span class="step-title">Import from MakerBook</span>
+    </div>
+    <div class="panel">
+      <div class="input-group">
+        <label>Paste Your MakerBook Listing Text</label>
+        <textarea id="mbPaste" rows="6" placeholder="Copy everything from your MakerBook listing — title, description, price, dimensions — and paste it here. The AI will extract and reformat it automatically."></textarea>
+      </div>
+      <div class="actions-row" style="margin-top:10px;">
+        <button class="btn btn-primary" id="fetchBtn" onclick="extractFromPaste()">Extract Fields →</button>
+      </div>
+      <p class="tip" style="margin-top:10px;">On your MakerBook listing page, select all the text (Ctrl+A or Cmd+A), copy it, and paste it above.</p>
+
+      <div class="or-divider">or fill in manually</div>
+
+      <!-- Manual form -->
+      <div class="input-row" style="gap:14px;">
+        <div class="input-group">
+          <label>Listing Title</label>
+          <input type="text" id="title" placeholder="e.g. Handmade Walnut End Grain Cutting Board" oninput="updateCharCount('title','titleCount',140)" />
+          <div class="char-count" id="titleCount">0 / 140</div>
+        </div>
+
+        <div class="input-group">
+          <label>Description</label>
+          <textarea id="description" rows="5" placeholder="Describe the piece — wood species, finish, dimensions, care instructions..." oninput="updateCharCount('description','descCount',2000)"></textarea>
+          <div class="char-count" id="descCount">0 / 2000</div>
+        </div>
+
+        <div class="three-col">
+          <div class="input-group">
+            <label>MakerBook Price ($)</label>
+            <input type="number" id="price" placeholder="0.00" min="0" step="0.01" oninput="updateEtsyPreview()" />
+          </div>
+          <div class="input-group">
+            <label>Etsy Markup — <span id="markupLabel">10%</span></label>
+            <div style="display:flex;align-items:center;gap:10px;margin-top:4px;">
+              <input type="range" id="markupSlider" min="0" max="100" value="10" step="1"
+                oninput="updateMarkup(this.value)"
+                style="flex:1;accent-color:var(--accent);cursor:pointer;height:4px;" />
+            </div>
+            <div style="font-size:11px;color:var(--accent);margin-top:5px;" id="etsyPricePreview">Etsy price: —</div>
+          </div>
+          <div class="input-group">
+            <label>Quantity</label>
+            <input type="number" id="quantity" placeholder="1" min="1" value="1" />
+          </div>
+        </div>
+          <div class="input-group">
+            <label>Category</label>
+            <select id="category">
+              <option value="">-- Select --</option>
+              <option>Cutting Boards</option>
+              <option>Serving Boards</option>
+              <option>Charcuterie Boards</option>
+              <option>Coffee Tables</option>
+              <option>End Tables</option>
+              <option>Shelving</option>
+              <option>Wooden Bowls</option>
+              <option>Kitchen Utensils</option>
+              <option>Home Décor</option>
+              <option>Custom / Other</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="two-col">
+          <div class="input-group">
+            <label>Shipping Box Size (L × W × H)</label>
+            <input type="text" id="dimensions" placeholder='e.g. 20" × 14" × 4" (box size for shipping)' />
+          </div>
+          <div class="input-group">
+            <label>Weight (lbs, for shipping)</label>
+            <input type="number" id="weight" placeholder="e.g. 3.5" min="0" step="0.1" />
+          </div>
+        </div>
+
+        <div class="input-group">
+          <label>Wood Species / Materials</label>
+          <input type="text" id="materials" placeholder="e.g. Hard maple, walnut, cherry — food-safe mineral oil finish" />
+        </div>
+
+        <div class="input-group">
+          <label>Etsy Tags <span style="color:var(--muted);font-size:10px;">(up to 13 — click to add)</span></label>
+          <div class="tag-chips" id="tagChips">
+            <span class="chip" onclick="toggleTag(this)">cutting board</span>
+            <span class="chip" onclick="toggleTag(this)">handmade</span>
+            <span class="chip" onclick="toggleTag(this)">wood gift</span>
+            <span class="chip" onclick="toggleTag(this)">walnut</span>
+            <span class="chip" onclick="toggleTag(this)">maple</span>
+            <span class="chip" onclick="toggleTag(this)">cherry wood</span>
+            <span class="chip" onclick="toggleTag(this)">kitchen gift</span>
+            <span class="chip" onclick="toggleTag(this)">end grain</span>
+            <span class="chip" onclick="toggleTag(this)">charcuterie</span>
+            <span class="chip" onclick="toggleTag(this)">serving board</span>
+            <span class="chip" onclick="toggleTag(this)">woodworking</span>
+            <span class="chip" onclick="toggleTag(this)">housewarming</span>
+            <span class="chip" onclick="toggleTag(this)">live edge</span>
+            <span class="chip" onclick="toggleTag(this)">custom wood</span>
+          </div>
+          <div id="tagCount" style="font-size:10px;color:var(--muted);margin-top:6px;">0 / 13 tags selected</div>
+        </div>
+
+        <div class="input-group">
+          <label>Processing Time</label>
+          <select id="processing">
+            <option value="Ready to ship in 1–3 business days">Ready to ship in 1–3 business days</option>
+            <option value="Ready to ship in 3–5 business days">Ready to ship in 3–5 business days</option>
+            <option value="Made to order: ships in 1–2 weeks">Made to order: ships in 1–2 weeks</option>
+            <option value="Made to order: ships in 2–4 weeks">Made to order: ships in 2–4 weeks</option>
+            <option value="Custom order: contact for timeline">Custom order: contact for timeline</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 2: Generate -->
+  <div class="step">
+    <div class="step-header">
+      <div class="step-num">02</div>
+      <span class="step-title">Generate Etsy Listing</span>
+    </div>
+    <div class="actions-row">
+      <button class="btn btn-primary" onclick="generateListing()">Generate Etsy Listing →</button>
+      <button class="btn btn-secondary" onclick="clearAll()">Clear All</button>
+    </div>
+  </div>
+
+  <!-- STATUS + ERROR -->
+  <div class="status-bar" id="statusBar">
+    <div class="spinner"></div>
+    <span id="statusText">Working...</span>
+  </div>
+  <div class="error-msg" id="errorMsg"></div>
+
+  <!-- STEP 3: Output -->
+  <div class="output-section" id="outputSection">
+    <div class="step">
+      <div class="step-header">
+        <div class="step-num">03</div>
+        <span class="step-title">Your Etsy Listing</span>
+      </div>
+
+      <div class="output-card">
+        <div class="output-card-header">
+          <div class="platform-label">
+            <div class="platform-dot"></div>
+            Etsy — Ready to Post
+          </div>
+          <button class="btn btn-copy" onclick="copyAll()">Copy All Fields</button>
+        </div>
+
+        <div class="output-field">
+          <div class="output-field-label">
+            Title
+            <button class="btn btn-copy" onclick="copyField('outTitle', this)">Copy</button>
+          </div>
+          <div class="output-field-value" id="outTitle">—</div>
+        </div>
+
+        <div class="output-field">
+          <div class="output-field-label">
+            Description
+            <button class="btn btn-copy" onclick="copyField('outDesc', this)">Copy</button>
+          </div>
+          <div class="output-field-value" id="outDesc">—</div>
+        </div>
+
+        <div class="output-field">
+          <div class="output-field-label">
+            Tags
+            <button class="btn btn-copy" onclick="copyField('outTags', this)">Copy</button>
+          </div>
+          <div class="output-field-value" id="outTags">—</div>
+        </div>
+
+        <div class="output-field">
+          <div class="output-field-label">
+            Price
+          </div>
+          <div class="output-field-value" id="outPrice">—</div>
+        </div>
+
+        <div class="output-field">
+          <div class="output-field-label">
+            Materials
+          </div>
+          <div class="output-field-value" id="outMaterials">—</div>
+        </div>
+
+        <div class="output-field">
+          <div class="output-field-label">
+            Processing Time
+          </div>
+          <div class="output-field-value" id="outProcessing">—</div>
+        </div>
+
+        <div class="output-field">
+          <div class="output-field-label">
+            Shipping / Dimensions
+          </div>
+          <div class="output-field-value" id="outShipping">—</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const ANTHROPIC_URL = "https://api.anthropic.com/v1/messages";
+const OLLAMA_URL = "http://localhost:11434/api/chat";
+let currentMode = 'ollama';
+
+function setMode(mode) {
+  currentMode = mode;
+  document.getElementById('modeOllama').classList.toggle('active', mode === 'ollama');
+  document.getElementById('modeCloud').classList.toggle('active', mode === 'cloud');
+  document.getElementById('ollamaPanel').style.display = mode === 'ollama' ? 'block' : 'none';
+  document.getElementById('cloudPanel').style.display = mode === 'cloud' ? 'block' : 'none';
+}
+
+async function testOllama() {
+  const status = document.getElementById('ollamaStatus');
+  status.style.color = 'var(--muted)';
+  status.textContent = 'Testing...';
+  try {
+    const res = await fetch('http://localhost:11434/api/tags');
+    if (res.ok) {
+      const data = await res.json();
+      const models = (data.models || []).map(m => m.name).join(', ');
+      status.style.color = 'var(--success)';
+      status.textContent = '✓ Connected' + (models ? ' — ' + models : '');
+    } else {
+      throw new Error('Not reachable');
+    }
+  } catch(e) {
+    status.style.color = '#e86060';
+    status.textContent = '✗ Ollama not running — start it and try again';
+  }
+}
+
+async function callAI(prompt) {
+  if (currentMode === 'ollama') {
+    const model = document.getElementById('ollamaModel').value.trim() || 'llama3.1';
+    const res = await fetch(OLLAMA_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model,
+        messages: [{ role: 'user', content: prompt }],
+        stream: false
+      })
+    });
+    if (!res.ok) throw new Error(`Ollama error ${res.status} — is it running?`);
+    const data = await res.json();
+    return data.message?.content || '';
+  } else {
+    const key = document.getElementById('apiKey').value.trim();
+    if (!key) throw new Error('Please enter your Anthropic API key.');
+    const res = await fetch(ANTHROPIC_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'anthropic-version': '2023-06-01',
+        'x-api-key': key,
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+    if (!res.ok) throw new Error(`Anthropic API error ${res.status}`);
+    const data = await res.json();
+    return data.content.map(b => b.text || '').join('');
+  }
+}
+
+function updateMarkup(val) {
+  document.getElementById('markupLabel').textContent = val + '%';
+  updateEtsyPreview();
+}
+
+function updateEtsyPreview() {
+  const price = parseFloat(document.getElementById('price').value);
+  const markup = parseInt(document.getElementById('markupSlider').value);
+  const preview = document.getElementById('etsyPricePreview');
+  if (!isNaN(price) && price > 0) {
+    const etsyPrice = (Math.ceil(price * (1 + markup / 100) * 100) / 100).toFixed(2);
+    preview.textContent = `Etsy price: $${etsyPrice}`;
+  } else {
+    preview.textContent = 'Etsy price: —';
+  }
+}
+
+function saveKey() {
+  const saved = document.getElementById('keySaved');
+  saved.classList.add('visible');
+  setTimeout(() => saved.classList.remove('visible'), 2000);
+}
+
+// ---- TAG LOGIC ----
+function toggleTag(el) {
+  const active = document.querySelectorAll('.chip.active');
+  if (el.classList.contains('active')) {
+    el.classList.remove('active');
+  } else if (active.length < 13) {
+    el.classList.add('active');
+  }
+  const count = document.querySelectorAll('.chip.active').length;
+  document.getElementById('tagCount').textContent = `${count} / 13 tags selected`;
+}
+
+function getSelectedTags() {
+  return Array.from(document.querySelectorAll('.chip.active')).map(c => c.textContent.trim());
+}
+
+// ---- CHAR COUNTS ----
+function updateCharCount(inputId, countId, max) {
+  const len = document.getElementById(inputId).value.length;
+  const el = document.getElementById(countId);
+  el.textContent = `${len} / ${max}`;
+  el.className = 'char-count' + (len > max ? ' over' : len > max * 0.85 ? ' warn' : '');
+}
+
+// ---- STATUS ----
+function setStatus(msg) {
+  const bar = document.getElementById('statusBar');
+  bar.classList.add('active');
+  document.getElementById('statusText').textContent = msg;
+}
+function clearStatus() {
+  document.getElementById('statusBar').classList.remove('active');
+}
+function showError(msg) {
+  const el = document.getElementById('errorMsg');
+  el.textContent = msg;
+  el.classList.add('visible');
+}
+function clearError() {
+  document.getElementById('errorMsg').classList.remove('visible');
+}
+
+// ---- EXTRACT FROM PASTED TEXT ----
+async function extractFromPaste() {
+  const pastedText = document.getElementById('mbPaste').value.trim();
+  if (!pastedText) { showError('Please paste your MakerBook listing text first.'); return; }
+  clearError();
+  setStatus('Extracting listing details...');
+
+  const prompt = `You are a listing data extractor. Extract product listing fields from this raw text copied from a marketplace listing page.
+
+Return ONLY a JSON object with these keys (use empty string if not found):
+- title
+- description
+- price (number only, no dollar sign or currency symbol)
+- dimensions
+- materials
+- category
+
+Text to extract from:
+"""
+${pastedText}
+"""
+
+Return ONLY the JSON object, no markdown, no extra text.`;
+
+  try {
+    const text = await callAI(prompt);
+    const clean = text.replace(/```json|```/g, '').trim();
+
+    let parsed;
+    try { parsed = JSON.parse(clean); }
+    catch(e) {
+      const match = clean.match(/\{[\s\S]*\}/);
+      if (match) parsed = JSON.parse(match[0]);
+      else throw new Error('Could not parse extracted data.');
+    }
+
+    if (parsed.title) document.getElementById('title').value = parsed.title;
+    if (parsed.description) document.getElementById('description').value = parsed.description;
+    if (parsed.price) document.getElementById('price').value = parsed.price;
+    if (parsed.dimensions) document.getElementById('dimensions').value = parsed.dimensions;
+    if (parsed.materials) document.getElementById('materials').value = parsed.materials;
+
+    updateCharCount('title','titleCount',140);
+    updateCharCount('description','descCount',2000);
+    clearStatus();
+
+  } catch(err) {
+    clearStatus();
+    showError('Extraction failed: ' + err.message + '. Try filling in the fields manually.');
+  }
+}
+
+// ---- OLD FETCH (kept for reference) ----
+async function fetchListing() {
+  const url = document.getElementById('mbUrl').value.trim();
+  if (!url) { showError('Please enter a MakerBook listing URL.'); return; }
+  clearError();
+  setStatus('Fetching MakerBook listing...');
+
+  try {
+    const prompt = `You are a listing data extractor. I will give you a URL for a product listing on MakerBook (a woodworking/maker marketplace). 
+    
+Please extract the following fields from that listing page and return ONLY a JSON object with these keys (use empty string if not found):
+- title
+- description  
+- price (number only, no dollar sign)
+- dimensions
+- materials
+- category
+
+URL: ${url}
+
+Return ONLY the JSON object, no other text, no markdown fences.`;
+
+    const text = await callAI(prompt);
+    const clean = text.replace(/```json|```/g, '').trim();
+    let parsed;
+    try { parsed = JSON.parse(clean); }
+    catch(e) {
+      const match = clean.match(/\{[\s\S]*\}/);
+      if (match) parsed = JSON.parse(match[0]);
+      else throw new Error('Could not parse listing data from response.');
+    }
+
+    if (parsed.title) document.getElementById('title').value = parsed.title;
+    if (parsed.description) document.getElementById('description').value = parsed.description;
+    if (parsed.price) document.getElementById('price').value = parsed.price;
+    if (parsed.dimensions) document.getElementById('dimensions').value = parsed.dimensions;
+    if (parsed.materials) document.getElementById('materials').value = parsed.materials;
+
+    updateCharCount('title','titleCount',140);
+    updateCharCount('description','descCount',2000);
+    clearStatus();
+  } catch(err) {
+    clearStatus();
+    showError('Could not extract listing. Try filling in the fields manually below. (' + err.message + ')');
+  }
+}
+
+// ---- GENERATE ETSY LISTING ----
+async function generateListing() {
+  clearError();
+
+  const title = document.getElementById('title').value.trim();
+  const description = document.getElementById('description').value.trim();
+  const price = document.getElementById('price').value.trim();
+  const dimensions = document.getElementById('dimensions').value.trim();
+  const materials = document.getElementById('materials').value.trim();
+  const quantity = document.getElementById('quantity').value.trim();
+  const category = document.getElementById('category').value.trim();
+  const processing = document.getElementById('processing').value.trim();
+  const tags = getSelectedTags();
+
+  if (!title && !description) {
+    showError('Please enter at least a title or description before generating.');
+    return;
+  }
+
+  setStatus('Generating your Etsy listing...');
+
+  const inputData = { title, description, price, dimensions, materials, quantity, category, processing, tags };
+
+  const categoryOptions = ['Cutting Boards','Serving Boards','Charcuterie Boards','Coffee Tables','End Tables','Shelving','Wooden Bowls','Kitchen Utensils','Home Décor','Custom / Other'];
+
+  const prompt = `You are an Etsy listing assistant for a handmade woodworking seller.
+
+Take this product information and return ONLY a JSON object with these exact keys:
+- title: Copy the title from the input EXACTLY as written. Do NOT change, reorder, or optimize it in any way. Return it character-for-character identical to the input.
+- description: The description field from the input, corrected ONLY for spelling mistakes and missing punctuation. Do NOT rewrite sentences, change words, reorder content, add new content, or alter the meaning or structure in any way. Fix typos and add punctuation only.
+- category: Pick the single best match from this list based on the title and description: ${categoryOptions.join(', ')}. Return the exact string from the list.
+- tags: array of 13 Etsy tags (strings), each max 20 chars, combining provided tags with additional SEO tags for woodworking buyers
+- materials: formatted materials list for Etsy's materials field
+- shipping_note: one sentence about shipping/handling based on dimensions and weight if provided
+
+Product info:
+${JSON.stringify(inputData, null, 2)}
+
+Return ONLY the JSON object. No markdown, no extra text.`;
+
+  try {
+    const text = await callAI(prompt);
+    const clean = text.replace(/```json|```/g, '').trim();
+
+    let parsed;
+    try { parsed = JSON.parse(clean); }
+    catch(e) {
+      const match = clean.match(/\{[\s\S]*\}/);
+      if (match) parsed = JSON.parse(match[0]);
+      else throw new Error('Failed to parse generated listing.');
+    }
+
+    // Populate output
+    document.getElementById('outTitle').textContent = title || parsed.title;
+    document.getElementById('outDesc').textContent = parsed.description || description;
+    document.getElementById('outTags').textContent = Array.isArray(parsed.tags) ? parsed.tags.join(', ') : tags.join(', ');
+    const markup = parseInt(document.getElementById('markupSlider').value);
+    const etsyPrice = price ? (Math.ceil(parseFloat(price) * (1 + markup / 100) * 100) / 100).toFixed(2) : null;
+    document.getElementById('outPrice').textContent = etsyPrice ? `$${etsyPrice}  (MakerBook: $${parseFloat(price).toFixed(2)} + ${markup}%)` : '—';
+    document.getElementById('outMaterials').textContent = parsed.materials || materials || '—';
+    document.getElementById('outProcessing').textContent = processing || '—';
+
+    // Auto-select category if AI returned one
+    if (parsed.category) {
+      const sel = document.getElementById('category');
+      for (let i = 0; i < sel.options.length; i++) {
+        if (sel.options[i].text === parsed.category) { sel.selectedIndex = i; break; }
+      }
+    }
+    document.getElementById('outShipping').textContent = (parsed.shipping_note || '') + (dimensions ? `  |  ${dimensions}` : '');
+
+    document.getElementById('outputSection').classList.add('visible');
+    document.getElementById('outputSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    clearStatus();
+
+  } catch(err) {
+    clearStatus();
+    showError('Generation failed: ' + err.message + '. Check your inputs and try again.');
+  }
+}
+
+// ---- COPY HELPERS ----
+async function copyField(id, btn) {
+  const text = document.getElementById(id).textContent;
+  await navigator.clipboard.writeText(text);
+  btn.textContent = 'Copied ✓';
+  btn.classList.add('copied');
+  setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000);
+}
+
+async function copyAll() {
+  const fields = ['outTitle','outDesc','outTags','outPrice','outMaterials','outProcessing','outShipping'];
+  const labels = ['TITLE','DESCRIPTION','TAGS','PRICE','MATERIALS','PROCESSING TIME','SHIPPING'];
+  const text = fields.map((id, i) => `--- ${labels[i]} ---\n${document.getElementById(id).textContent}`).join('\n\n');
+  await navigator.clipboard.writeText(text);
+  const btn = document.querySelector('.output-card-header .btn-copy');
+  btn.textContent = 'Copied ✓';
+  btn.classList.add('copied');
+  setTimeout(() => { btn.textContent = 'Copy All Fields'; btn.classList.remove('copied'); }, 2000);
+}
+
+// ---- CLEAR ----
+function clearAll() {
+  ['title','description','price','quantity','dimensions','weight','materials','mbUrl'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+  document.querySelectorAll('.chip.active').forEach(c => c.classList.remove('active'));
+  document.getElementById('tagCount').textContent = '0 / 13 tags selected';
+  document.getElementById('outputSection').classList.remove('visible');
+  updateCharCount('title','titleCount',140);
+  updateCharCount('description','descCount',2000);
+  clearError(); clearStatus();
+}
+</script>
+</body>
+</html>
